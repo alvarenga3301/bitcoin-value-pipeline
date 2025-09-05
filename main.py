@@ -1,4 +1,4 @@
-import requests  
+import requests
 import psycopg2
 from datetime import datetime
 import os
@@ -9,52 +9,55 @@ load_dotenv()
 # Pega a URL do banco a partir da variável de ambiente
 conn_db = os.environ['DATABASE_URL']
 
-# Link API do IBGE
-link ='https://servicodados.ibge.gov.br/api/v1/rmpg/nivel/EMARC?momentoInicial=2025-01-07-10-00&momentoFinal=2025-01-07-13-00&incluirPrevisao=S'
+# Link API do Binance para BTC/BRL - últimas 1000 velas de 1 hora
+link = 'https://api.binance.com/api/v3/klines?symbol=BTCBRL&interval=1h&limit=1000'
 
-
-#Extrai dados do nivel do mar
+# Extrai dados do Binance
 dados = requests.get(link).json()
 
 # Conecta com o Banco de Dados PostgreSQL
 with psycopg2.connect(conn_db) as conn:
     cur = conn.cursor() 
 
-    #Executa comando SQL para criar a tabela 
+    # Executa comando SQL para criar a tabela 
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS maregrafo_ibge (
+        CREATE TABLE IF NOT EXISTS binance_btc (
             id SERIAL PRIMARY KEY,
-            dt_hr_leitura TIMESTAMP,
-            radar FLOAT,
-            encoder FLOAT,
-            previsao FLOAT
+            dt_hr_abertura TIMESTAMP,
+            preco_abertura FLOAT,
+            preco_maximo FLOAT,
+            preco_minimo FLOAT,
+            preco_fechamento FLOAT,
+            volume_btc FLOAT,
+            volume_brl FLOAT,
+            num_trades INTEGER
         );
     """)
 
-    #coleta e ordena os dados
+    # Coleta e ordena os dados
     for registro in dados:
-        dt_str = registro['dtHrLeitura']
-        dt_str = dt_str[:10] + ' ' + dt_str[11:13] + ':' + dt_str[14:]
-        dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
-
-        radar = registro.get('radar')
-        encoder = registro.get('encoder')
-        previsao = registro.get('previsao')
+        # Converte timestamp de milissegundos para datetime
+        dt = datetime.fromtimestamp(registro[0] / 1000)
         
+        preco_abertura = float(registro[1])
+        preco_maximo = float(registro[2])
+        preco_minimo = float(registro[3])
+        preco_fechamento = float(registro[4])
+        volume_btc = float(registro[5])
+        volume_brl = float(registro[7])
+        num_trades = int(registro[8])
 
-         #executa comando SQL para inserir dados na tabela
+        # Executa comando SQL para inserir dados na tabela
         cur.execute("""
-            INSERT INTO maregrafo_ibge (dt_hr_leitura, radar, encoder, previsao)
-            VALUES (%s, %s, %s, %s)
-        """, (dt, radar, encoder, previsao))
+            INSERT INTO binance_btc (dt_hr_abertura, preco_abertura, preco_maximo, 
+                                   preco_minimo, preco_fechamento, volume_btc, 
+                                   volume_brl, num_trades)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (dt, preco_abertura, preco_maximo, preco_minimo, 
+              preco_fechamento, volume_btc, volume_brl, num_trades))
 
-    #confirma todas as operações feitas na conexão e encerra a conexão
+    # Confirma todas as operações feitas na conexão e encerra a conexão
     conn.commit()
     cur.close()  
 
-print("Dados inseridos com sucesso!")
-
-
-
-
-
+print("Dados do Binance inseridos com sucesso!")
