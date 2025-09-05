@@ -1,21 +1,20 @@
-# Arquivos Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Ambiente virtual
-venv/
-env/
-
-# Arquivos de ambiente
+# 🔐 Credenciais
 .env
 .env.local
 
-# IDE
+# 🐍 Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 📦 Ambiente virtual  
+venv/
+env/
+
+# 🛠️ IDE
 .vscode/
 .idea/
 
-# Sistema
+# 🖥️ Sistema
 .DS_Store
 Thumbs.db
